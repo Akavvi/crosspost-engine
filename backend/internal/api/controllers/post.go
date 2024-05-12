@@ -12,7 +12,7 @@ import (
 )
 
 type PostService interface {
-	Create(ctx context.Context, post *models.Post) (*models.Post, error)
+	Create(ctx context.Context, request *http.Request) (*models.Post, error)
 	Delete(ctx context.Context, id int) error
 	Find(ctx context.Context, id int) (*models.Post, error)
 	GetAll(ctx context.Context) ([]*models.Post, error)
@@ -30,16 +30,7 @@ func NewPostController(service *service.PostService) *PostController {
 }
 
 func (c *PostController) Create(w http.ResponseWriter, r *http.Request) {
-	p := &models.Post{}
-	err := json.NewDecoder(r.Body).Decode(p)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	p.BeforeCreate()
-
-	post, err := c.service.Create(r.Context(), p)
+	post, err := c.service.Create(r.Context(), r)
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]bool{"created": false})
 		return

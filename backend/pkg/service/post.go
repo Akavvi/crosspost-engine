@@ -2,8 +2,15 @@ package service
 
 import (
 	"blog-app/internal/models"
+	"bytes"
 	"context"
+	"fmt"
+	"github.com/google/uuid"
+	"io"
 	"log"
+	"mime/multipart"
+	"net/http"
+	"os"
 	"time"
 )
 
@@ -12,6 +19,10 @@ type IPostRepository interface {
 	Delete(context.Context, time.Duration, int) error
 	GetAll(context.Context, time.Duration) ([]*models.Post, error)
 	Get(context.Context, time.Duration, int) (*models.Post, error)
+}
+
+type ITelegramService interface {
+	Send(post *models.Post) error
 }
 
 type PostService struct {
@@ -24,9 +35,37 @@ func NewPostService(repo IPostRepository, timeout time.Duration, telegram ITeleg
 	return &PostService{repo: repo, timeout: timeout, telegram: telegram}
 }
 
-func (s *PostService) Create(ctx context.Context, post *models.Post) (*models.Post, error) {
+func (s *PostService) Create(ctx context.Context, r *http.Request) (*models.Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
+
+	post := &models.Post{}
+	post.Title = r.FormValue("title")
+	post.Content = r.FormValue("content")
+
+	file, _, _ := r.FormFile("file")
+	if file != nil {
+		defer func(file multipart.File) {
+			err := file.Close()
+			if err != nil {
+				return
+			}
+		}(file)
+
+		var buf bytes.Buffer
+		_, err := io.Copy(&buf, file)
+		if err != nil {
+			return nil, err
+		}
+
+		name := uuid.NewString()
+		err = os.WriteFile(fmt.Sprintf("backend/attachments/%s.png", name), buf.Bytes(), 0644)
+		buf.Reset()
+		if err != nil {
+			log.Print(err)
+		}
+		post.Attachment = &name
+	}
 
 	p, err := s.repo.Save(ctx, s.timeout, post)
 	if err != nil {

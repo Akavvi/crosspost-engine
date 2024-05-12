@@ -6,11 +6,12 @@ import (
 )
 
 type Post struct {
-	ID        int       `json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID         int       `json:"id"`
+	Title      string    `json:"title"`
+	Content    string    `json:"content"`
+	Attachment *string   `json:"attachments" db:"file"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
 }
 
 func (p *Post) BeforeCreate() {

@@ -22,9 +22,9 @@ func (r *PostRepository) Save(ctx context.Context, timeout time.Duration, post *
 	defer cancel()
 	p := &models.Post{}
 
-	query := "INSERT INTO posts (title, content) VALUES ($1, $2) returning *;"
+	query := "INSERT INTO posts (title, content, file) VALUES ($1, $2, nullif($3, '')) returning *;"
 	tx := r.db.MustBegin()
-	err := tx.QueryRowxContext(ctx, query, post.Title, post.Content).StructScan(p)
+	err := tx.QueryRowxContext(ctx, query, post.Title, post.Content, post.Attachment).StructScan(p)
 	if err != nil {
 		return nil, err
 	}
