@@ -24,8 +24,11 @@ func (r *PostRepository) Save(ctx context.Context, timeout time.Duration, post *
 
 	query := "INSERT INTO posts (title, content) VALUES ($1, $2) returning *;"
 	tx := r.db.MustBegin()
-	tx.QueryRowxContext(ctx, query, post.Title, post.Content).StructScan(p)
-	err := tx.Commit()
+	err := tx.QueryRowxContext(ctx, query, post.Title, post.Content).StructScan(p)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +57,12 @@ func (r *PostRepository) GetAll(ctx context.Context, timeout time.Duration) ([]*
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sqlx.Rows) {
+		err = rows.Close()
+		if err != nil {
+			return
+		}
+	}(rows)
 
 	for rows.Next() {
 		p := &models.Post{}
@@ -72,7 +80,8 @@ func (r *PostRepository) Get(ctx context.Context, timeout time.Duration, id int)
 	defer cancel()
 	dest := &models.Post{}
 	query := "SELECT * FROM posts WHERE id = $1"
-	err := r.db.QueryRowxContext(ctx, query, id).StructScan(dest)
+	row := r.db.QueryRowxContext(ctx, query, id)
+	err := row.StructScan(dest)
 	if err != nil {
 		return nil, err
 	}

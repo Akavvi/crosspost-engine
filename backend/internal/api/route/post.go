@@ -11,8 +11,11 @@ import (
 
 func NewPostRoute(db *sqlx.DB, router *mux.Router, telegram service.ITelegramService) {
 	repo := repository.NewPostRepository(db)
-	s := service.NewPostService(repo, telegram, 5*time.Second)
+	s := service.NewPostService(repo, 5*time.Second, telegram)
 	c := controllers.NewPostController(s)
 
-	router.HandleFunc("/addPost", c.AddPost).Methods("POST")
+	router.HandleFunc("/create", c.Create).Methods("POST")
+	router.HandleFunc("/{id}", c.Delete).Methods("DELETE")
+	router.HandleFunc("/{id}", c.Find).Methods("GET")
+	router.HandleFunc("/", c.GetAll).Methods("GET")
 }

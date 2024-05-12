@@ -3,6 +3,7 @@ package service
 import (
 	"blog-app/internal/models"
 	"context"
+	"log"
 	"time"
 )
 
@@ -19,7 +20,7 @@ type PostService struct {
 	telegram ITelegramService
 }
 
-func NewPostService(repo IPostRepository, telegram ITelegramService, timeout time.Duration) *PostService {
+func NewPostService(repo IPostRepository, timeout time.Duration, telegram ITelegramService) *PostService {
 	return &PostService{repo: repo, timeout: timeout, telegram: telegram}
 }
 
@@ -33,7 +34,41 @@ func (s *PostService) Create(ctx context.Context, post *models.Post) (*models.Po
 	}
 	err = s.telegram.Send(p)
 	if err != nil {
-		return nil, err
+		log.Println("Telegram is not responding or service is not initialized")
 	}
 	return p, nil
+}
+
+func (s *PostService) Delete(ctx context.Context, id int) error {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	exists, err := s.repo.Get(ctx, s.timeout, id)
+	if err != nil || exists == nil {
+		return err
+	}
+	err = s.repo.Delete(ctx, s.timeout, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *PostService) Find(ctx context.Context, id int) (*models.Post, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	post, err := s.repo.Get(ctx, s.timeout, id)
+	if err != nil {
+		return nil, err
+	}
+	return post, nil
+}
+
+func (s *PostService) GetAll(ctx context.Context) ([]*models.Post, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	posts, err := s.repo.GetAll(ctx, s.timeout)
+	if err != nil {
+		return nil, err
+	}
+	return posts, nil
 }
