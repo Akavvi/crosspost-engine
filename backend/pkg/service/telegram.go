@@ -19,7 +19,7 @@ func (t *TelegramService) Send(post *models.Post) error {
 	text := fmt.Sprintf("<b>%s</b>\n\n%s", post.Title, post.Content)
 	if post.Attachment != nil {
 		var buf bytes.Buffer
-		file, _ := os.Open(fmt.Sprintf("backend/attachments/%s.png", *post.Attachment))
+		file, _ := os.Open(fmt.Sprintf("backend/attachments/%s", *post.Attachment))
 		defer func(file *os.File) {
 			err := file.Close()
 			if err != nil {
@@ -51,5 +51,6 @@ func NewTelegramService(bot *gotgbot.Bot, chatID int64) *TelegramService {
 	return &TelegramService{
 		Bot:    bot,
 		ChatID: chatID,
+		Alive:  true,
 	}
 }

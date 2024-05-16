@@ -16,19 +16,18 @@ import (
 type App struct {
 	Env      *setup.Env
 	DB       *sqlx.DB
-	Telegram *service.TelegramService
+	Telegram service.TelegramService
 }
 
 func main() {
 	r := mux.NewRouter()
-	app := App{}
+	app := &App{}
 	app.Env = setup.NewEnv()
 	app.DB = setup.ConnectToDB(app.Env)
 	bot, err := gotgbot.NewBot(app.Env.TGToken, nil)
-	if err != nil {
-		log.Fatal(err)
+	if bot != nil || err == nil {
+		app.Telegram = *service.NewTelegramService(bot, app.Env.ChannelID)
 	}
-	app.Telegram = service.NewTelegramService(bot, app.Env.ChannelID)
 
 	postsGroup := r.PathPrefix("/posts").Subrouter()
 	route.NewPostRoute(app.DB, postsGroup, app.Telegram)
@@ -40,5 +39,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	log.Print("Listening server on http://127.0.0.1:8000")
 	log.Fatal(srv.ListenAndServe())
 }

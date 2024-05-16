@@ -11,10 +11,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
-type IPostRepository interface {
+type PostRepository interface {
 	Save(context.Context, time.Duration, *models.Post) (*models.Post, error)
 	Delete(context.Context, time.Duration, int) error
 	GetAll(context.Context, time.Duration) ([]*models.Post, error)
@@ -26,12 +27,12 @@ type ITelegramService interface {
 }
 
 type PostService struct {
-	repo     IPostRepository
+	repo     PostRepository
 	timeout  time.Duration
-	telegram ITelegramService
+	telegram TelegramService
 }
 
-func NewPostService(repo IPostRepository, timeout time.Duration, telegram ITelegramService) *PostService {
+func NewPostService(repo PostRepository, timeout time.Duration, telegram TelegramService) *PostService {
 	return &PostService{repo: repo, timeout: timeout, telegram: telegram}
 }
 
@@ -43,7 +44,7 @@ func (s *PostService) Create(ctx context.Context, r *http.Request) (*models.Post
 	post.Title = r.FormValue("title")
 	post.Content = r.FormValue("content")
 
-	file, _, _ := r.FormFile("file")
+	file, header, _ := r.FormFile("file")
 	if file != nil {
 		defer func(file multipart.File) {
 			err := file.Close()
@@ -59,21 +60,28 @@ func (s *PostService) Create(ctx context.Context, r *http.Request) (*models.Post
 		}
 
 		name := uuid.NewString()
-		err = os.WriteFile(fmt.Sprintf("backend/attachments/%s.png", name), buf.Bytes(), 0644)
+		extension := filepath.Ext(header.Filename)
+		if extension == "" {
+			extension = ".png"
+		}
+		filename := fmt.Sprintf("%s%s", name, extension)
+		err = os.WriteFile(fmt.Sprintf("backend/attachments/%s", filename), buf.Bytes(), 0644)
 		buf.Reset()
 		if err != nil {
 			log.Print(err)
 		}
-		post.Attachment = &name
+		post.Attachment = &filename
 	}
 
 	p, err := s.repo.Save(ctx, s.timeout, post)
 	if err != nil {
 		return nil, err
 	}
-	err = s.telegram.Send(p)
-	if err != nil {
-		log.Println("Telegram is not responding or service is not initialized")
+	if s.telegram.Alive == true {
+		err = s.telegram.Send(p)
+		if err != nil {
+			log.Println("Telegram is not responding or service is not initialized")
+		}
 	}
 	return p, nil
 }

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func NewPostRoute(db *sqlx.DB, router *mux.Router, telegram service.ITelegramService) {
+func NewPostRoute(db *sqlx.DB, router *mux.Router, telegram service.TelegramService) {
 	repo := repository.NewPostRepository(db)
 	s := service.NewPostService(repo, 5*time.Second, telegram)
 	c := controllers.NewPostController(s)
