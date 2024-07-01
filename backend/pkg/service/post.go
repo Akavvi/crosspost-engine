@@ -72,16 +72,20 @@ func (s *PostService) Create(ctx context.Context, r *http.Request) (*models.Post
 		}
 		post.Attachment = &filename
 	}
-
-	p, err := s.repo.Save(ctx, s.timeout, post)
-	if err != nil {
-		return nil, err
-	}
 	if s.telegram.Alive == true {
-		err = s.telegram.Send(p)
+		message, err := s.telegram.Send(post)
 		if err != nil {
 			log.Println("Telegram is not responding or service is not initialized")
 		}
+		post.TelegramMessageId = &message.MessageId
+	}
+	post.BeforeCreate()
+	p, err := s.repo.Save(ctx, s.timeout, post)
+	if err != nil {
+		if s.telegram.Alive == true {
+			_ = s.telegram.Delete(*post.TelegramMessageId)
+		}
+		return nil, err
 	}
 	return p, nil
 }
@@ -94,6 +98,10 @@ func (s *PostService) Delete(ctx context.Context, id int) error {
 		return err
 	}
 	err = s.repo.Delete(ctx, s.timeout, id)
+	if err != nil {
+		return err
+	}
+	err = s.telegram.Delete(*exists.TelegramMessageId)
 	if err != nil {
 		return err
 	}

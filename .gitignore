@@ -101,5 +101,5 @@ fabric.properties
 go.work
 
 # Config file
-.env
+backend/.env
 
