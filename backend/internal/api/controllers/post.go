@@ -76,3 +76,17 @@ func (c *PostController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(posts)
 }
+
+func (c *PostController) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	post, err := c.service.Update(r.Context(), id, r)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]any{"updated": false, "error": err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(post)
+}

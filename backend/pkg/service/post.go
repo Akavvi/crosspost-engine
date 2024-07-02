@@ -17,6 +17,7 @@ import (
 
 type PostRepository interface {
 	Save(context.Context, time.Duration, *models.Post) (*models.Post, error)
+	Update(context.Context, time.Duration, *models.Post) (*models.Post, error)
 	Delete(context.Context, time.Duration, int) error
 	GetAll(context.Context, time.Duration) ([]*models.Post, error)
 	Get(context.Context, time.Duration, int) (*models.Post, error)
@@ -65,7 +66,7 @@ func (s *PostService) Create(ctx context.Context, r *http.Request) (*models.Post
 			extension = ".png"
 		}
 		filename := fmt.Sprintf("%s%s", name, extension)
-		err = os.WriteFile(fmt.Sprintf("backend/attachments/%s", filename), buf.Bytes(), 0644)
+		err = os.WriteFile(fmt.Sprintf("attachments/%s", filename), buf.Bytes(), 0644)
 		buf.Reset()
 		if err != nil {
 			log.Print(err)
@@ -126,4 +127,32 @@ func (s *PostService) GetAll(ctx context.Context) ([]*models.Post, error) {
 		return nil, err
 	}
 	return posts, nil
+}
+
+func (s *PostService) Update(ctx context.Context, id int, r *http.Request) (*models.Post, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	post, err := s.repo.Get(ctx, s.timeout, id)
+	if err != nil || post == nil {
+		return nil, err
+	}
+
+	post.Title = r.FormValue("title")
+	post.Content = r.FormValue("content")
+	post.UpdatedAt = time.Now()
+
+	p, err := s.repo.Update(ctx, s.timeout, post)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.TelegramMessageId != nil {
+		err = s.telegram.Update(*p.TelegramMessageId, p)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return p, nil
 }

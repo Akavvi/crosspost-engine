@@ -17,5 +17,6 @@ func NewPostRoute(db *sqlx.DB, router *mux.Router, telegram service.TelegramServ
 	router.HandleFunc("/create", c.Create).Methods("POST")
 	router.HandleFunc("/{id}", c.Delete).Methods("DELETE")
 	router.HandleFunc("/{id}", c.Find).Methods("GET")
+	router.HandleFunc("/{id}", c.Update).Methods("PUT")
 	router.HandleFunc("/", c.GetAll).Methods("GET")
 }

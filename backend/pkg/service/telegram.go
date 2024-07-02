@@ -20,7 +20,7 @@ func (t *TelegramService) Send(post *models.Post) (*gotgbot.Message, error) {
 	var msg *gotgbot.Message
 	if post.Attachment != nil {
 		var buf bytes.Buffer
-		file, _ := os.Open(fmt.Sprintf("backend/attachments/%s", *post.Attachment))
+		file, _ := os.Open(fmt.Sprintf("attachments/%s", *post.Attachment))
 		defer func(file *os.File) {
 			err := file.Close()
 			if err != nil {
@@ -31,7 +31,7 @@ func (t *TelegramService) Send(post *models.Post) (*gotgbot.Message, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = t.Bot.SendPhoto(t.ChatID, buf.Bytes(), &gotgbot.SendPhotoOpts{
+		message, err := t.Bot.SendPhoto(t.ChatID, buf.Bytes(), &gotgbot.SendPhotoOpts{
 			Caption:   text,
 			ParseMode: "html",
 		})
@@ -39,6 +39,7 @@ func (t *TelegramService) Send(post *models.Post) (*gotgbot.Message, error) {
 		if err != nil {
 			return nil, err
 		}
+		msg = message
 	} else {
 		message, err := t.Bot.SendMessage(t.ChatID, text, &gotgbot.SendMessageOpts{ParseMode: "html"})
 		if err != nil {
@@ -51,6 +52,15 @@ func (t *TelegramService) Send(post *models.Post) (*gotgbot.Message, error) {
 
 func (t *TelegramService) Delete(id int64) error {
 	ok, err := t.Bot.DeleteMessage(t.ChatID, id, &gotgbot.DeleteMessageOpts{})
+	if err != nil || !ok {
+		return err
+	}
+	return nil
+}
+
+func (t *TelegramService) Update(id int64, post *models.Post) error {
+	text := fmt.Sprintf("<b>%s</b>\n\n%s", post.Title, post.Content)
+	_, ok, err := t.Bot.EditMessageText(text, &gotgbot.EditMessageTextOpts{MessageId: id, ChatId: t.ChatID, ParseMode: "html"})
 	if err != nil || !ok {
 		return err
 	}

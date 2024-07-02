@@ -35,6 +35,24 @@ func (r *PostRepository) Save(ctx context.Context, timeout time.Duration, post *
 	return p, nil
 }
 
+func (r *PostRepository) Update(ctx context.Context, timeout time.Duration, post *models.Post) (*models.Post, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	p := &models.Post{}
+
+	query := "UPDATE posts SET title = $1, content = $2 WHERE id = $3 RETURNING *;"
+	tx := r.db.MustBegin()
+	err := tx.QueryRowxContext(ctx, query, post.Title, post.Content, post.ID).StructScan(p)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 func (r *PostRepository) Delete(ctx context.Context, timeout time.Duration, id int) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
