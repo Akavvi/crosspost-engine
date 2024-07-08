@@ -3,6 +3,7 @@ package service
 import (
 	"blog-app/internal/models"
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"io"
@@ -59,6 +60,9 @@ func (t *TelegramService) Delete(id int64) error {
 }
 
 func (t *TelegramService) Update(id int64, post *models.Post) error {
+	if post.Attachment != nil {
+		return errors.New("this post contains an attachment, you can't edit it")
+	}
 	text := fmt.Sprintf("<b>%s</b>\n\n%s", post.Title, post.Content)
 	_, ok, err := t.Bot.EditMessageText(text, &gotgbot.EditMessageTextOpts{MessageId: id, ChatId: t.ChatID, ParseMode: "html"})
 	if err != nil || !ok {
